@@ -1,5 +1,5 @@
 /**
-jQuery용 옛한글 입력기 akorn input v0.1
+jQuery용 옛한글 입력기 akorn input v0.1.1
 
 email: bab2min@gmail.com
 github: https://github.com/bab2min/akorn-input/
@@ -42,7 +42,23 @@ license: MIT License
 			}
 		}
 	};
-
+	
+	/*
+	매핑 테이블
+	AP: 기본 초성 문자 -> 옛한글 초성
+	PA: 옛한글 초성 -> 기본 초성 문자
+	BP: 기본 중성 문자 -> 옛한글 중성
+	PB: 옛한글 중성 -> 기본 중성 문자
+	CP: 기본 종성 문자 -> 옛한글 종성
+	PC: 옛한글 종성 -> 기본 종성 문자
+	SP: ㅜ,ㅠ 특수키 조합 -> 옛한글 초성
+	*/
+	var tableAP = {}, tablePA = {};
+	var tableBP = {}, tablePB = {};
+	var tableCP = {}, tablePC = {};
+	var tableSP = {};
+	
+	/* 자음(초성) -> 옛한글 매핑 테이블 */
 	var tableA = {
 	'\u3131':'\u1100',
 	'\u3132':'\u1101',
@@ -65,6 +81,9 @@ license: MIT License
 	'\u314E':'\u1112',
 	};
 
+	/* 자음(초성) + Shift키 -> 옛한글 매핑 테이블
+	 ** ㅠ+Shift, ㅜ+Shift도 자음으로 매핑되므로 이 테이블에 포함됨
+	*/
 	var tableAShift = {
 	'\u3141':'\u1140',
 	'\u3147':'\u114C',
@@ -77,8 +96,8 @@ license: MIT License
 	'\u315C':'\u1155',
 	};
 
-	var tableAP = {}, tablePA = {};
-
+	
+	/* 모음 -> 옛한글 매핑 테이블 */
 	var tableB = {
 	'\u314F':'\u1161',
 	'\u3150':'\u1162',
@@ -96,8 +115,7 @@ license: MIT License
 	'\u3163':'\u1175',
 	};
 
-	var tableBP = {}, tablePB = {};
-
+	/* 자음(종성) -> 옛한글 매핑 테이블 */
 	var tableC = {
 	'\u3131':'\u11A8',
 	'\u3132':'\u11A9',
@@ -117,14 +135,14 @@ license: MIT License
 	'\u314E':'\u11C2',
 	};
 
+	/* 자음(종성) + Shift키 -> 옛한글 매핑 테이블 */
 	var tableCShift = {
 	'\u3141':'\u11EB',
 	'\u3147':'\u11F0',
 	'\u314E':'\u11F9',
 	};
 
-	var tableCP = {}, tablePC = {};
-
+	/* 옛한글 초성 분해 테이블 */
 	var _tableAP = [
 	'ㄴㄱ',
 	'ㄴㄴ',
@@ -204,6 +222,7 @@ license: MIT License
 	'ㄷㄹ',
 	];
 
+	/* 옛한글 초성 분해 테이블 (유니코드 5.2 추가 영역) */
 	var _tableAP2 = [
 	'ㄷㅁ',
 	'ㄷㅂ',
@@ -236,6 +255,7 @@ license: MIT License
 	'\u1159\u1159',
 	];
 
+	/* 옛한글 중성 분해 테이블 */
 	var _tableBP = [
 	'ㅏ',
 	'ㅐ',
@@ -310,6 +330,7 @@ license: MIT License
 	'ㅗㅒ',
 	];
 
+	/* 옛한글 중성 분해 테이블 (유니코드 5.2 추가 영역) */
 	var _tableBP2 = [
 	'ㅗㅕ',
 	'ㅗㅗㅣ',
@@ -336,6 +357,7 @@ license: MIT License
 	'ㅏㅏㅔ',
 	];
 
+	/* 옛한글 종성 분해 테이블 (유니코드 5.2 추가 영역) */
 	var _tableCP = [
 	'ㄱ',
 	'ㄲ',
@@ -427,6 +449,7 @@ license: MIT License
 	'ㄴㄴ',
 	];
 
+	/* 옛한글 종성 분해 테이블 (유니코드 5.2 추가 영역) */
 	var _tableCP2 = [
 	'ㄴㄹ',
 	'ㄴㅊ',
@@ -494,7 +517,11 @@ license: MIT License
 		tablePA[u] = t;
 	}
 	for(var i in tableAShift) {
-		tableAP[tableA[i] + '.'] = tableAShift[i];
+		if(tableA[i]) {
+			tableAP[tableA[i] + '.'] = tableAShift[i];
+		} else if(tableB[i]) {
+			tableSP[tableB[i] + '.'] = tableAShift[i];
+		}
 	}
 	tableAP['\u1109\u1109'] = '\u110A';
 	tablePA['\u110A'] = '\u1109\u1109';
@@ -634,6 +661,9 @@ license: MIT License
 		return dis;
 	}
 
+	function isOnset(c) {
+		return (0x1100 <= c && c <= 0x115E) || (0xA960 <= c && c <= 0xA97F);
+	}
 	function isVowel(c) {
 		return (0x1160 <= c && c <= 0x11A7) || (0xD7B0 <= c && c <= 0xD7C6);
 	}
@@ -693,7 +723,9 @@ license: MIT License
 				suffix = curVal.substr(d[1] + d[2]);
 				curVal = curVal.substring(d[1] - 1, d[1]);
 				if(isVowel(curVal.charCodeAt(0))) {
-					curVal = prefix + curVal + reassemble(inserted, tablePC, tableCP) + suffix;
+					var combination = curVal + reassemble(inserted, tablePC, tableCP);
+					if(!isOnset(prefix.charCodeAt(prefix.length - 1))) combination = reassemble(combination, {}, tableSP);
+					curVal = prefix + combination + suffix;
 				} else {
 					var t1 = tablePA, t2 = tableAP;
 					if(this.compBegin < d[1]-1 && isVowel(prefix.charCodeAt(d[1]-2))) {
