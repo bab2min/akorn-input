@@ -1,7 +1,7 @@
 # jQuery용 옛한글 입력기 akorn-input
 
 akorn-input은 한국어 고문헌 검색기 어듸메(https://akorn.bab2min.pe.kr/ )를 개발하는데에 사용한 웹 브라우저용 옛한글 입력기입니다.
-jQuery기반의 가벼운 Javascript 라이브러리이며, Internet Explorer 8+, Edge, Chrome에서 동작합니다. (Firefox에서는 입력기가 정상적으로 동작하지 않습니다.)
+jQuery기반의 가벼운 Javascript 라이브러리이며, Internet Explorer 8+, Edge, Chrome, Firefox에서 동작합니다.
 
 ## 사용법
 akorn-input을 사용하기 위해서는 1.10 버전 이상의 jQuery 라이브러리를 사용해야 합니다. HTML 코드 상에서 다음과 같이 js script를 추가합니다.
@@ -10,6 +10,8 @@ akorn-input을 사용하기 위해서는 1.10 버전 이상의 jQuery 라이브�
     <!--꼭 3.2.1버전일 필요는 없습니다.-->
     <script src="js/akinput.js"></script>
 
+또한 다음 라이브러리에 의존성이 있습니다.
+* https://github.com/component/textarea-caret-position
 
 다음과 같이 input 엘리먼트에 옛한글 입력기를 붙일 수 있습니다.
 

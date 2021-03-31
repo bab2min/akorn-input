@@ -1,5 +1,5 @@
-/**
-jQuery용 옛한글 입력기 akorn input v0.1.1
+﻿/**
+jQuery용 옛한글 입력기 akorn input v0.2.0
 
 email: bab2min@gmail.com
 github: https://github.com/bab2min/akorn-input/
@@ -581,7 +581,28 @@ license: MIT License
 		return str;
 	}
 
-	function splitSyllable(str) {
+	function splitComposition(str) {
+		var chos = ['ㄱ', 'ㄲ', 'ㄴ', 'ㄷ', 'ㄸ', 'ㄹ', 'ㅁ', 'ㅂ', 'ㅃ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅉ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+		var jungs = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅗ', 'ㅗㅏ', 'ㅗㅐ', 'ㅗㅣ', 'ㅛ', 'ㅜ', 'ㅜㅓ', 'ㅜㅔ', 'ㅜㅣ', 'ㅠ', 'ㅡ', 'ㅡㅣ', 'ㅣ'];
+		var jongs = ['', 'ㄱ', 'ㄲ', 'ㄱㅅ', 'ㄴ', 'ㄴㅈ', 'ㄴㅎ', 'ㄷ', 'ㄹ', 'ㄹㄱ', 'ㄹㅁ', 'ㄹㅂ', 'ㄹㅅ', 'ㄹㅌ', 'ㄹㅍ', 'ㄹㅎ', 'ㅁ', 'ㅂ', 'ㅂㅅ', 'ㅅ', 'ㅆ', 'ㅇ', 'ㅈ', 'ㅊ', 'ㅋ', 'ㅌ', 'ㅍ', 'ㅎ'];
+		function complexSyllable(code) {
+			switch(code)
+			{
+				case 0x3133: return 'ㄱㅅ';
+				case 0x3135: return 'ㄴㅈ';
+				case 0x3136: return 'ㄴㅎ';
+				case 0x313A: return 'ㄹㄱ';
+				case 0x313B: return 'ㄹㅁ';
+				case 0x313C: return 'ㄹㅂ';
+				case 0x313D: return 'ㄹㅅ';
+				case 0x313E: return 'ㄹㅌ';
+				case 0x313F: return 'ㄹㅍ';
+				case 0x3140: return 'ㄹㅎ';
+				case 0x3144: return 'ㅂㅅ';
+			}
+			return null;
+		}
+
 		var ret = '';
 		for(var i = 0; i < str.length; i++) {
 			var code = str.charCodeAt(i);
@@ -591,11 +612,19 @@ license: MIT License
 				s = Math.floor(s / 28);
 				var v = s % 21;
 				s = Math.floor(s / 21);
-				ret += String.fromCharCode(0x1100 + s);
-				ret += String.fromCharCode(0x1161 + v);
-				if(c) ret += String.fromCharCode(0x11A7 + c);
+				ret += chos[s];
+				ret += jungs[v];
+				if(c) ret += jongs[c];
+			} else if(0x1100 <= code && code <= 0x1112) {
+				ret += chos[code - 0x1100];
+			} else if(0x1161 <= code && code <= 0x1175) {
+				ret += jungs[code - 0x1161];
+			} else if(0x11A8 <= code && code <= 0x11C2) {
+				ret += jongs[code - 0x11A7];
 			} else {
-				ret += str.substr(i, 1);
+				var c = complexSyllable(code);
+				if (c) ret += c;
+				else ret += str.substr(i, 1);
 			}
 		}
 		return ret;
@@ -671,6 +700,89 @@ license: MIT License
 		return (0x11A8 <= c && c <= 0x11FF) || (0xD7CB <= c && c <= 0xD7FF);
 	}
 
+    function getValFromTables(k, a, b, shifted) {
+        if(b[k] && shifted) return b[k];
+        return a[k] || null;
+    }
+
+	function akComposite(v, p, ch, shifted, compBegin, compEnd) {
+        var inserted = null, prefix, suffix, curVal;
+		if(compBegin == compEnd) {
+			compBegin = compEnd = p;
+		}
+        if((inserted = getValFromTables(ch, tableA, tableAShift, shifted)) || '.' == (inserted = ch)) {
+			var b = Math.max(compBegin, p - 1);
+            prefix = v.substr(0, b);
+            suffix = v.substr(p);
+            curVal = v.substring(b, p);
+            if(isVowel(curVal.charCodeAt(0))) {
+                var combination = curVal + reassemble(inserted, tablePC, tableCP);
+                if(!isOnset(prefix.charCodeAt(prefix.length - 1))) combination = reassemble(combination, {}, tableSP);
+                curVal = prefix + combination + suffix;
+            } else {
+                var t1 = tablePA, t2 = tableAP;
+                if(compBegin < p - 1 && isVowel(prefix.charCodeAt(p - 2))) {
+                    t1 = tablePC, t2 = tableCP;
+                }
+                var r = reassemble(curVal + inserted, t1, t2);
+                if(r.length > 1) {
+                    compBegin = prefix.length + r.length - 1;
+                }
+                curVal = prefix + r + suffix;
+            }
+            p = compEnd = curVal.length - suffix.length;
+        } else if((inserted = tableB[ch])) {
+            if(!compEnd) {
+                compBegin = p;
+                p++;
+                inserted = '\u115F' + inserted;
+            }
+
+			var b = Math.max(compBegin, p - 1);
+            prefix = v.substr(0, b);
+            suffix = v.substr(p);
+            curVal = v.substring(b, p);
+            if(isCoda(curVal.charCodeAt(0))) {
+                var rt = reassemble(curVal, tablePC);
+                prefix += reassemble(rt.substr(0, rt.length - 1), tablePC, tableCP);
+                curVal = rt.substr(rt.length - 1);
+                compBegin = prefix.length;
+            }
+            r = reassemble(curVal + inserted, tablePB, tableBP);
+            if(r.length > 1) {
+                if(isVowel(r.charCodeAt(0))) r = r.substr(0, 1) + '\u115F' + r.substr(1);
+                compBegin = prefix.length + 1;
+            }
+            curVal = prefix + r + suffix;
+            p = compEnd = curVal.length - suffix.length;
+        } else {
+            compEnd = 0;
+            document.getElementById('log').textContent += ch + "(" + ch.charCodeAt(0) + ")\n";
+            return null;
+        }
+        return [curVal, p, compBegin, compEnd];
+    }
+
+	function splitSyllable(str) {
+		var ret = '';
+		for(var i = 0; i < str.length; i++) {
+			var code = str.charCodeAt(i);
+			if(0xAC00 <= code && code < 0xD7A4) {
+				var s = (code - 0xAC00);
+				var c = s % 28;
+				s = Math.floor(s / 28);
+				var v = s % 21;
+				s = Math.floor(s / 21);
+				ret += String.fromCharCode(0x1100 + s);
+				ret += String.fromCharCode(0x1161 + v);
+				if(c) ret += String.fromCharCode(0x11A7 + c);
+			} else {
+				ret += str.substr(i, 1);
+			}
+		}
+		return ret;
+	}
+
 	function findDelta(value, prevValue) {
 		var delta = '';
 		var deltaPos = -1;
@@ -685,97 +797,312 @@ license: MIT License
 		}
 		return [delta, deltaPos, value.length - prevValue.length];
 	}
-	
-	$.fn.akInput = function(){
-		this.each(function(){
-			this.befVal = '';
-			this.shifted = false;
-			this.compBegin = 0;
-			this.compEnd = 0;
-			this.akInputOn = true;
-		});
-	
-		this.keydown(function(e){
-			if(e.keyCode == 16) this.shifted = true;
-		}).keyup(function(e){
-			if(e.keyCode == 16) this.shifted = false;
-		});
-		
-		this.on('input', function(e){
-			if(!this.akInputOn) return;
-			function getValFromTables(k, a, b, shifted) {
-				if(b[k] && shifted) return b[k];
-				return a[k] || null;
+
+	var isIE = /*@cc_on!@*/false || !!document.documentMode;
+	var isEdge = !isIE && !!window.StyleMedia;
+	var isChrome = navigator.userAgent.indexOf('Chrome') > -1;
+	var isFirefox = typeof InstallTrigger !== 'undefined';
+
+	if (isEdge || isChrome || isFirefox) {
+		$.fn.akInput = function(){
+			if(!$("style#ak-global-stylesheet").length) {
+				$("<style>").attr("id", "ak-global-stylesheet").html("@keyframes ak-caret {0% { background-color: #00f; }\n 20% { background-color: #00f; }\n 50% { background-color: #fff; }\n 80% { background-color: #00f; }\n 100% { background-color: #00f; }}").appendTo("head");
 			}
-		
-			var caretPos = $(this).getCaretPos();
-			var curVal = splitSyllable($(this).val());
-			if(this.befVal == curVal) return;
-			var d = findDelta(curVal, this.befVal);
-			//$('#st').append(d[0] + ',' + d[1] + ',' + d[2] + ': ');
-			var ch = d[0];
-			var inserted = null, prefix, suffix;
-			if((inserted = getValFromTables(ch, tableA, tableAShift, this.shifted)) || '.' == (inserted = ch)) {
-				if(!this.compEnd) {
-					this.compBegin = this.caretPos;
-				}
-				prefix = curVal.substr(0, d[1] - 1);
-				suffix = curVal.substr(d[1] + d[2]);
-				curVal = curVal.substring(d[1] - 1, d[1]);
-				if(isVowel(curVal.charCodeAt(0))) {
-					var combination = curVal + reassemble(inserted, tablePC, tableCP);
-					if(!isOnset(prefix.charCodeAt(prefix.length - 1))) combination = reassemble(combination, {}, tableSP);
-					curVal = prefix + combination + suffix;
+	
+			var receivers = [];
+			this.each(function(){
+				this.ak_shifted = false;
+				this.ak_composite_state = 0;
+				this.ak_comp_begin = 0;
+				this.ak_comp_end = 0;
+				this.ak_input_on = true;
+				var container = $('<div style="position:relative">');
+				var receiver = $('<input style="position:absolute;z-index:-1;border:none;background:transparent;left:2px;right:2px;top:2px;">');
+				var caret = $('<span style="position: absolute; top:1px; left:1px; animation: ak-caret 1s infinite; width:1px; height:1em; z-index:1;">');
+				this.ak_receiver = receiver[0];
+				this.ak_caret = caret[0];
+	
+				$(this).before(container);
+				container.append($(this));
+				container.append(receiver);
+				container.append(caret);
+				this.ak_receiver.ak_sender = this;
+				receivers.push(this.ak_receiver);
+			});
+	
+			receivers = $(receivers);
+	
+			function insertOne(target, inserted) {
+				var receiver = $(target[0].ak_receiver);
+				var v = target.val();
+				var p = target.getCaretPos();
+				target.val(v.substr(0, p) + inserted + v.substr(p));
+				target.setCaretPos(p + inserted.length);
+				receiver.val(" ");
+			}
+	
+			function deleteOne(target) {
+				var receiver = $(target[0].ak_receiver);
+				var v = target.val();
+				var p = target.getCaretPos();
+				target.val(v.substr(0, p - 1) + v.substr(p));
+				target.setCaretPos(p - 1);
+				target[0].ak_comp_end = p - 1;
+				if(target[0].ak_comp_begin > p - 1) target[0].ak_comp_begin = p - 1;
+				receiver.val(" ");
+			}
+	
+			function updatePseudoCaret(target) {
+				var caret = $(target[0].ak_caret);
+				var cp = getCaretCoordinates(target[0], target.getCaretPos());
+				caret
+					.css("left", cp.left - target.scrollLeft())
+					.css("top", cp.top - target.scrollTop())
+					.css("height", cp.height);
+			}
+	
+			receivers.keydown(function(e){
+				this.ak_sender.ak_shifted = e.shiftKey;
+			}).keyup(function(e){
+				this.ak_sender.ak_shifted = e.shiftKey;
+			});
+	
+			function compStart(_this, data) {
+				var sender = _this.ak_sender;
+				sender.ak_composite_start = true;
+				sender.ak_composite_before = '';
+				sender.ak_composite_state = 1;
+			}
+	
+			function compUpdate(_this, data) {
+				var my = $(_this);
+				var sender = _this.ak_sender;
+				var data = splitComposition(data);
+				var bf = sender.ak_composite_before;
+				if (data.length < bf.length) {
+					sender.ak_composite_update = false;
 				} else {
-					var t1 = tablePA, t2 = tableAP;
-					if(this.compBegin < d[1]-1 && isVowel(prefix.charCodeAt(d[1]-2))) {
-						t1 = tablePC, t2 = tableCP;
+					sender.ak_composite_update = data.substr(data.length - 1);
+				}
+				sender.ak_composite_before = data;
+				my.val(" ");
+	
+				setTimeout(function(){
+					var ch = sender.ak_composite_update;
+					if (ch === false) {
+						deleteOne($(sender));
+						updatePseudoCaret($(sender));
+						my.focus();
 					}
-					var r = reassemble(curVal + inserted, t1, t2);
+					if (!ch) return;
+					sender.ak_composite_update = '';
+					sender.ak_composite_start = false;
+					var v = $(sender).val();
+					var p = $(sender).getCaretPos();
+	
+					var ret = akComposite(v, p, ch, sender.ak_shifted, sender.ak_comp_begin, sender.ak_comp_end);
+					if (ret) {
+						$(sender).val(ret[0]);
+						$(sender).setCaretPos(ret[1]);
+						sender.ak_comp_begin = ret[2];
+						sender.ak_comp_end = ret[3];
+						updatePseudoCaret($(sender));
+						my.focus();
+					}
+				}, 5);
+			}
+	
+			receivers.on('input', function(e){
+				var sender = this.ak_sender;
+				var inserted = e.originalEvent.data;
+				if(e.originalEvent.inputType == "insertLineBreak") {
+					sender.ak_composite_state = 0;
+					insertOne($(sender), "\n");
+					updatePseudoCaret($(sender));
+					$(this).focus();
+				} else if (inserted == " ") {
+					sender.ak_composite_state = 0;
+					insertOne($(sender), inserted);
+					updatePseudoCaret($(sender));
+					$(this).focus();
+				} else if (inserted == ".") {
+					var v = $(sender).val();
+					var p = $(sender).getCaretPos();
+	
+					var ret = akComposite(v, p, ".", false, sender.ak_comp_begin, sender.ak_comp_end);
+					$(sender).val(ret[0]);
+					$(sender).setCaretPos(ret[1]);
+					sender.ak_comp_begin = ret[2];
+					sender.ak_comp_end = ret[3];
+					updatePseudoCaret($(sender));
+					$(this).focus();
+				} else if (sender.ak_composite_state == 0) {
+					$(this).val(" ");
+					if (inserted) {
+						// inserted
+						if (!/^[ㄱ-ㅎㅏ-ㅣ]+$/.test(splitComposition(inserted))) {
+							insertOne($(sender), inserted);
+						}
+					} else {
+						// deleted
+						deleteOne($(sender));
+					}
+					updatePseudoCaret($(sender));
+					$(this).focus();
+				}
+			}).on('compositionstart', function(e){
+				compStart(this, e.originalEvent.data);
+			}).on('compositionupdate', function(e){
+				compUpdate(this, e.originalEvent.data);
+			}).on('compositionend', function(e){
+				var sender = this.ak_sender;
+				$(this).val(" ");
+				if (e.originalEvent.data) sender.ak_composite_update = '';
+				else sender.ak_composite_update = false;
+				sender.ak_composite_state = 0;
+			}).on('keydown', function(e){
+				var sender = this.ak_sender;
+				if (e.key == 'ArrowLeft') {
+					var p = Math.max($(sender).getCaretPos() - 1, 0);
+					$(sender).setCaretPos(p);
+					sender.ak_comp_begin = p;
+					sender.ak_comp_end = p;
+					setTimeout(function(){updatePseudoCaret($(sender));}, 1);
+				} else if (e.key == 'ArrowRight') {
+					var p = Math.min($(sender).getCaretPos() + 1, $(sender).val().length);
+					$(sender).setCaretPos(p);
+					sender.ak_comp_begin = p;
+					sender.ak_comp_end = p;
+					setTimeout(function(){updatePseudoCaret($(sender));}, 1);
+				}
+			}).on('keypress', function(e){
+			}).on('keyup', function(e){
+				var sender = this.ak_sender;
+				if (e.key == 'Backspace') {
+					if ($(this).val().length == 0) {
+						deleteOne($(sender));
+						updatePseudoCaret($(sender));
+						$(this).focus();
+					}
+				}
+			});
+	
+			this.click(function(){
+				updatePseudoCaret($(this));
+				var p = $(this).getCaretPos();
+				this.ak_comp_begin = p;
+				this.ak_comp_end = p;
+			}).keydown(function(){
+				var _this = $(this);
+				setTimeout(function(){
+					updatePseudoCaret(_this);
+					var p = _this.getCaretPos();
+					_this[0].ak_comp_begin = p;
+					_this[0].ak_comp_end = p;
+				}, 1);
+			});
+	
+			this.on('input', function(e){
+				if(/^[ㄱ-ㅎㅏ-ㅣ]+$/.test(e.originalEvent.data)) {
+					var v = $(this).val();
+					var p = $(this).getCaretPos();
+					$(this).val(v.substr(0, p - 1) + v.substr(p));
+					$(this).setCaretPos(p - 1);
+					compStart(this.ak_receiver, "");
+					compUpdate(this.ak_receiver, e.originalEvent.data);
+				}
+				updatePseudoCaret($(this));
+				$(this.ak_receiver).focus();
+			});
+		};
+	} else {
+		$.fn.akInput = function(){
+			this.each(function(){
+				this.befVal = '';
+				this.shifted = false;
+				this.compBegin = 0;
+				this.compEnd = 0;
+				this.akInputOn = true;
+			});
+		
+			this.keydown(function(e){
+				if(e.keyCode == 16) this.shifted = true;
+			}).keyup(function(e){
+				if(e.keyCode == 16) this.shifted = false;
+			});
+			
+			this.on('input', function(e){
+				if(!this.akInputOn) return;
+			
+				var caretPos = $(this).getCaretPos();
+				var curVal = splitSyllable($(this).val());
+				if(this.befVal == curVal) return;
+				var d = findDelta(curVal, this.befVal);
+				//$('#st').append(d[0] + ',' + d[1] + ',' + d[2] + ': ');
+				var ch = d[0];
+				var inserted = null, prefix, suffix;
+				if((inserted = getValFromTables(ch, tableA, tableAShift, this.shifted)) || '.' == (inserted = ch)) {
+					if(!this.compEnd) {
+						this.compBegin = this.caretPos;
+					}
+					prefix = curVal.substr(0, d[1] - 1);
+					suffix = curVal.substr(d[1] + d[2]);
+					curVal = curVal.substring(d[1] - 1, d[1]);
+					if(isVowel(curVal.charCodeAt(0))) {
+						var combination = curVal + reassemble(inserted, tablePC, tableCP);
+						if(!isOnset(prefix.charCodeAt(prefix.length - 1))) combination = reassemble(combination, {}, tableSP);
+						curVal = prefix + combination + suffix;
+					} else {
+						var t1 = tablePA, t2 = tableAP;
+						if(this.compBegin < d[1]-1 && isVowel(prefix.charCodeAt(d[1]-2))) {
+							t1 = tablePC, t2 = tableCP;
+						}
+						var r = reassemble(curVal + inserted, t1, t2);
+						if(r.length > 1) {
+							this.compBegin = prefix.length + r.length - 1;
+						}
+						curVal = prefix + r + suffix;
+					}
+					caretPos = this.compEnd = curVal.length - suffix.length;
+					//$('#st').append(inserted + '(' + this.compBegin + ',' + this.compEnd + ')\n');
+				} else if((inserted = tableB[ch])) {
+					if(!this.compEnd) {
+						this.compBegin = caretPos;
+						caretPos++;
+						inserted = '\u115F' + inserted;
+					}
+					prefix = curVal.substr(0, d[1] - 1);
+					suffix = curVal.substr(d[1] + d[2]);
+					curVal = curVal.substring(d[1] - 1, d[1]);
+					if(isCoda(curVal.charCodeAt(0))) {
+						var rt = reassemble(curVal, tablePC);
+						prefix += reassemble(rt.substr(0, rt.length - 1), tablePC, tableCP);
+						curVal = rt.substr(rt.length - 1);
+						this.compBegin = prefix.length;
+					}
+					r = reassemble(curVal + inserted, tablePB, tableBP);
 					if(r.length > 1) {
-						this.compBegin = prefix.length + r.length - 1;
+						if(isVowel(r.charCodeAt(0))) r = r.substr(0, 1) + '\u115F' + r.substr(1);
+						this.compBegin = prefix.length + 1;
 					}
 					curVal = prefix + r + suffix;
+					caretPos = this.compEnd = curVal.length - suffix.length;
+					//$('#st').append(inserted + '(' + this.compBegin + ',' + this.compEnd + ')\n');
+				} else {
+					//$('#st').append('\n');
+					if(d[2] >= 0) this.compEnd = 0;
 				}
-				caretPos = this.compEnd = curVal.length - suffix.length;
-				//$('#st').append(inserted + '(' + this.compBegin + ',' + this.compEnd + ')\n');
-			} else if((inserted = tableB[ch])) {
-				if(!this.compEnd) {
-					this.compBegin = caretPos;
-					caretPos++;
-					inserted = '\u115F' + inserted;
+				curVal = curVal.replace(/\u115F([^\u1160-\u11A7\uD7B0-\uD7C6]|$)/g, '$1');
+				this.befVal = curVal;
+				//$('#st').append("update = " + curVal + "\n");
+				if(inserted || d[2] < 0) {
+					$(this).blur();
+					$(this).val(joinSyllable(curVal));
+					var _this = $(this);
+					setTimeout(function(){_this.setCaretPos(caretPos);}, 0);
 				}
-				prefix = curVal.substr(0, d[1] - 1);
-				suffix = curVal.substr(d[1] + d[2]);
-				curVal = curVal.substring(d[1] - 1, d[1]);
-				if(isCoda(curVal.charCodeAt(0))) {
-					var rt = reassemble(curVal, tablePC);
-					prefix += reassemble(rt.substr(0, rt.length - 1), tablePC, tableCP);
-					curVal = rt.substr(rt.length - 1);
-					this.compBegin = prefix.length;
-				}
-				r = reassemble(curVal + inserted, tablePB, tableBP);
-				if(r.length > 1) {
-					if(isVowel(r.charCodeAt(0))) r = r.substr(0, 1) + '\u115F' + r.substr(1);
-					this.compBegin = prefix.length + 1;
-				}
-				curVal = prefix + r + suffix;
-				caretPos = this.compEnd = curVal.length - suffix.length;
-				//$('#st').append(inserted + '(' + this.compBegin + ',' + this.compEnd + ')\n');
-			} else {
-				//$('#st').append('\n');
-				if(d[2] >= 0) this.compEnd = 0;
-			}
-			curVal = curVal.replace(/\u115F([^\u1160-\u11A7\uD7B0-\uD7C6]|$)/g, '$1');
-			this.befVal = curVal;
-			//$('#st').append("update = " + curVal + "\n");
-			if(inserted || d[2] < 0) {
-				$(this).blur();
-				$(this).val(joinSyllable(curVal));
-				var _this = $(this);
-				setTimeout(function(){_this.setCaretPos(caretPos);}, 0);
-			}
-		});
-	};
+			});
+		};
+	}
 	
 }());
