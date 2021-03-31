@@ -815,7 +815,7 @@ license: MIT License
 				this.ak_composite_state = 0;
 				this.ak_comp_begin = 0;
 				this.ak_comp_end = 0;
-				this.ak_input_on = true;
+				this.akInputOn = true;
 				var container = $('<div style="position:relative">');
 				var receiver = $('<input style="position:absolute;z-index:-1;border:none;background:transparent;left:2px;right:2px;top:2px;">');
 				var caret = $('<span style="position: absolute; top:1px; left:1px; animation: ak-caret 1s infinite; width:1px; height:1em; z-index:1;">');
@@ -913,6 +913,7 @@ license: MIT License
 			}
 	
 			receivers.on('input', function(e){
+				if (!this.ak_sender.akInputOn) return;
 				var sender = this.ak_sender;
 				var inserted = e.originalEvent.data;
 				if(e.originalEvent.inputType == "insertLineBreak") {
@@ -951,16 +952,20 @@ license: MIT License
 					$(this).focus();
 				}
 			}).on('compositionstart', function(e){
+				if (!this.ak_sender.akInputOn) return;
 				compStart(this, e.originalEvent.data);
 			}).on('compositionupdate', function(e){
+				if (!this.ak_sender.akInputOn) return;
 				compUpdate(this, e.originalEvent.data);
 			}).on('compositionend', function(e){
+				if (!this.ak_sender.akInputOn) return;
 				var sender = this.ak_sender;
 				$(this).val(" ");
 				if (e.originalEvent.data) sender.ak_composite_update = '';
 				else sender.ak_composite_update = false;
 				sender.ak_composite_state = 0;
 			}).on('keydown', function(e){
+				if (!this.ak_sender.akInputOn) return;
 				var sender = this.ak_sender;
 				if (e.key == 'ArrowLeft') {
 					var p = Math.max($(sender).getCaretPos() - 1, 0);
@@ -977,6 +982,7 @@ license: MIT License
 				}
 			}).on('keypress', function(e){
 			}).on('keyup', function(e){
+				if (!this.ak_sender.akInputOn) return;
 				var sender = this.ak_sender;
 				if (e.key == 'Backspace') {
 					if ($(this).val().length == 0) {
@@ -988,11 +994,13 @@ license: MIT License
 			});
 	
 			this.click(function(){
+				if (!this.akInputOn) return;
 				updatePseudoCaret($(this));
 				var p = $(this).getCaretPos();
 				this.ak_comp_begin = p;
 				this.ak_comp_end = p;
 			}).keydown(function(){
+				if (!this.akInputOn) return;
 				var _this = $(this);
 				setTimeout(function(){
 					updatePseudoCaret(_this);
@@ -1003,6 +1011,7 @@ license: MIT License
 			});
 	
 			this.on('input', function(e){
+				if (!this.akInputOn) return;
 				if(/^[ㄱ-ㅎㅏ-ㅣ]+$/.test(e.originalEvent.data)) {
 					var v = $(this).val();
 					var p = $(this).getCaretPos();
