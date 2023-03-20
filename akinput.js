@@ -1,5 +1,5 @@
 ﻿/**
-jQuery용 옛한글 입력기 akorn input v0.2.0
+jQuery용 옛한글 입력기 akorn input v0.2.1
 
 email: bab2min@gmail.com
 github: https://github.com/bab2min/akorn-input/
@@ -95,7 +95,6 @@ license: MIT License
 	'\u3160':'\u1154',
 	'\u315C':'\u1155',
 	};
-
 	
 	/* 모음 -> 옛한글 매핑 테이블 */
 	var tableB = {
@@ -525,6 +524,11 @@ license: MIT License
 	}
 	tableAP['\u1109\u1109'] = '\u110A';
 	tablePA['\u110A'] = '\u1109\u1109';
+
+	tableAP['\u113C.'] = '\u113D';
+	tableAP['\u113E.'] = '\u113F';
+	tableAP['\u114E.'] = '\u114F';
+	tableAP['\u1150.'] = '\u1151';
 
 	for(var i in _tableBP) {
 		var t = mapping(_tableBP[i], tableB);
