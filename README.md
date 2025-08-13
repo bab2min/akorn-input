@@ -1,27 +1,24 @@
-# jQuery용 옛한글 입력기 akorn-input
+# Javascript 기반 웹 브라우저용 옛한글 입력기 akorn-input
 
-akorn-input은 한국어 고문헌 검색기 어듸메(https://akorn.bab2min.pe.kr/ )를 개발하는데에 사용한 웹 브라우저용 옛한글 입력기입니다.
-jQuery기반의 가벼운 Javascript 라이브러리이며, Internet Explorer 8+, Edge, Chrome, Firefox에서 동작합니다.
+akorn-input은 한국어 고문헌 검색기 어듸메(https://akorn.bab2min.pe.kr/ )를 개발하는데에 사용한 Javascript 기반의 웹 브라우저용 옛한글 입력기입니다. IME로 composing되는 한글 자모 입력을 가로채어 자체적으로 옛한글을 조합하는 방식으로 구현되어 있습니다.
+웹 브라우저별로 composition 이벤트를 처리하는 방식이 다소 다르기에 종종 입력 과정에서 버그가 발생할 수 있습니다. 현재는 Edge, Chrome, Firefox에서 정상 동작하는 것을 확인하였습니다.
 
 ## 사용법
-akorn-input을 사용하기 위해서는 1.10 버전 이상의 jQuery 라이브러리를 사용해야 합니다. HTML 코드 상에서 다음과 같이 js script를 추가합니다.
+HTML 코드 상에서 다음과 같이 js script를 추가합니다.
+```html
+<script src="js/akinput.js"></script>
+```
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-    <!--꼭 3.2.1버전일 필요는 없습니다.-->
-    <script src="js/akinput.js"></script>
-
-또한 다음 라이브러리에 의존성이 있습니다.
-* https://github.com/component/textarea-caret-position
-
-다음과 같이 input 엘리먼트에 옛한글 입력기를 붙일 수 있습니다.
-
-    <input type='text' id='test' />
-    <script>
-    $(function(){
-        $('#test').akinput(); // akorn-input 입력기 initializing
-    });
-    </script>
-
+다음과 같이 input 또는 textarea 엘리먼트에 옛한글 입력기를 붙일 수 있습니다.
+```html
+<style>
+@import url(https://fonts.googleapis.com/earlyaccess/notosanskr.css);
+</style>
+<input type='text' id='test' style="font-family:'Noto Sans KR'"/>
+<script>
+makeAkInput(document.getElementById('test'));
+</script>
+```
 옛한글을 지원하는 폰트가 없는 경우, 옛한글이 입력되더라도 제대로 화면에 출력되지 않습니다. 
 옛한글을 지원하는 웹 폰트에는 대표적으로 Noto Sans CJK(https://www.google.com/get/noto/ )가 있습니다. 원활한 입력을 위해서는 Noto Sans CJK와 같이 옛한글을 지원하는 폰트를 이용하시길 추천합니다.
 
