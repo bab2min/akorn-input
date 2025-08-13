@@ -1,4 +1,12 @@
-﻿(function(){
+﻿/**
+jQuery용 옛한글 입력기 akorn input v0.3.0
+
+email: bab2min@gmail.com
+github: https://github.com/bab2min/akorn-input/
+license: MIT License
+**/
+
+(function(){
 	const isBrowser = (typeof window !== 'undefined');
 	const isFirefox = (isBrowser && window.mozInnerScreenX != null);
 
@@ -109,6 +117,7 @@
         }
         inputElement.ignoringComposition = true; // Flag to indicate composition is being ignored
         
+		inputElement.composingEvents = {};
         inputElement.lastValue = inputElement.value;
 		inputElement.lastCompositionEndTime = 0;
 		inputElement.addEventListener('beforeinput', function(event) {
@@ -119,30 +128,9 @@
 					event.preventDefault();
 				}
 			}
+		});
 
-		})
-        inputElement.addEventListener('input', function(event) {
-            if (!this.ignoringComposition) return; // Ignore if not set to ignore composition
-			const thisEvent = event;
-            const inputType = event.inputType;
-			const trueValue = inputElement.value;
-			//console.log(event, inputElement.lastValue, trueValue);
-            if (inputType == 'insertText' || inputType == 'insertCompositionText' || inputType == 'insertLineBreak') {
-				if (event.isComposing) {
-					setTimeout(function(){ 
-						inputElement.blur();
-						inputElement.focus();
-					}, timeDelay);
-					return;
-				}
-            } else if (inputType == 'deleteContentBackward') {
-				if (event.timeStamp < inputElement.lastCompositionEndTime + compositionDeletingThreshold) {
-					return;
-				}
-			} else {
-				return;
-			}
-
+		function dispatch(event, inputType, trueValue) {
 			// find difference between last value and current value
 			const diff = findDiff(inputElement.lastValue, trueValue);
 			if (!diff) return; // No difference found
@@ -160,7 +148,7 @@
 					end: diff[2],
 					lastValue: inputElement.lastValue,
 					value: delta,
-					event: thisEvent,
+					event: event,
 				});
 			} else if (diff[0] == 'delete') {
 				value = callback({
@@ -169,7 +157,7 @@
 					end: diff[2],
 					lastValue: inputElement.lastValue,
 					value: null,
-					event: thisEvent,
+					event: event,
 				});
 			} else if (diff[0] == 'replace') {
 				const delta = trueValue.slice(diff[3], diff[4]);
@@ -179,7 +167,7 @@
 					end: diff[2],
 					lastValue: inputElement.lastValue,
 					value: delta,
-					event: thisEvent,
+					event: event,
 				});
 			}
 
@@ -190,6 +178,36 @@
 					inputElement.lastValue = value;
 				}, 0);
 			}
+		}
+
+        inputElement.addEventListener('input', function(event) {
+            if (!this.ignoringComposition) return; // Ignore if not set to ignore composition
+            const inputType = event.inputType;
+			const trueValue = inputElement.value;
+			//console.log(event, inputElement.lastValue, trueValue);
+            if (inputType == 'insertText' || inputType == 'insertCompositionText' || inputType == 'insertLineBreak') {
+				if (event.isComposing) {
+					setTimeout(function(){ 
+						inputElement.blur();
+						inputElement.focus();
+					}, timeDelay);
+					inputElement.composingEvents[event.data] = setTimeout(function(){
+						dispatch(event, inputType, trueValue);
+					}, timeDelay * 2);
+					return;
+				}
+            } else if (inputType == 'deleteContentBackward') {
+				if (event.timeStamp < inputElement.lastCompositionEndTime + compositionDeletingThreshold) {
+					return;
+				}
+			} else {
+				return;
+			}
+			if (inputElement.composingEvents[event.data]) {
+				clearTimeout(inputElement.composingEvents[event.data]);
+				delete inputElement.composingEvents[event.data];
+			}
+			dispatch(event, inputType, trueValue);
         });
 
 		inputElement.addEventListener('compositionend', function(event) {
@@ -942,6 +960,7 @@
 	}
 
     function makeAkInput(element, options) {
+		if (!element) return;
 		if (typeof options === 'undefined') options = {};
 		if (typeof options.displayComposing === 'undefined') options.displayComposing = true;
 
@@ -988,10 +1007,12 @@
         }
 
 		function onKeyDown(event) {
+			if (!element.akInputOn) return;
 			element.akShifted = event.shiftKey;
 		}
 
 		function onKeyUp(event) {
+			if (!element.akInputOn) return;
 			element.akShifted = event.shiftKey;
 			if (event.key == 'Backspace') {
 				//console.log(event);
@@ -1004,6 +1025,7 @@
 		}
 
 		function onClick(event) {
+			if (!element.akInputOn) return;
 			element.akCompBegin = null;
 			updateSurrogateDiv(element);
 		}
@@ -1132,5 +1154,20 @@
 			element.akSurrogateDiv = createSurrogateDiv(element);
 		}
     }
+
+	function enableAkInput(element) {
+		if (element.akInputOn) return;
+		element.akInputOn = true;
+		enableCompositionIgnoringInput(element);
+	}
+
+	function disableAkInput(element) {
+		if (!element.akInputOn) return;
+		element.akInputOn = false;
+		disableCompositionIgnoringInput(element);
+	}
+
     window.makeAkInput = makeAkInput;
+	window.enableAkInput = enableAkInput;
+	window.disableAkInput = disableAkInput;
 }());
