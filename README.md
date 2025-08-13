@@ -1,4 +1,4 @@
-# jQuery용 옛한글 입력기 akorn-input
+# Javascript 기반 웹 브라우저용 옛한글 입력기 akorn-input
 
 akorn-input은 한국어 고문헌 검색기 어듸메(https://akorn.bab2min.pe.kr/ )를 개발하는데에 사용한 Javascript 기반의 웹 브라우저용 옛한글 입력기입니다. IME로 composing되는 한글 자모 입력을 가로채어 자체적으로 옛한글을 조합하는 방식으로 구현되어 있습니다.
 웹 브라우저별로 composition 이벤트를 처리하는 방식이 다소 다르기에 종종 입력 과정에서 버그가 발생할 수 있습니다. 현재는 Edge, Chrome, Firefox에서 정상 동작하는 것을 확인하였습니다.
