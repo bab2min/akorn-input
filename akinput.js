@@ -941,9 +941,15 @@ license: MIT License
                 newPosition = deletePosition + deleted.length;
             } else if (isVowel(code)) {
                 var deleted = deleteUnit(text.slice(deletePosition, deletePosition + 1), tablePB, tableBP);
-                if (!deleted && deletePosition > 0 && text.charCodeAt(deletePosition - 1) == 0x115F) {
-                    text = text.slice(0, deletePosition - 1) + text.slice(deletePosition + 1);
-                    newPosition = deletePosition - 1;
+                if (!deleted && deletePosition > 0) {
+                    if (text.charCodeAt(deletePosition - 1) == 0x115F) {
+                        text = text.slice(0, deletePosition - 1) + text.slice(deletePosition + 1);
+                        newPosition = deletePosition - 1;
+                    } else if (isOnset(text.charCodeAt(deletePosition - 1))) {
+                        // 중성을 지울때는 중성 채움 문자를 넣어준다.
+                        text = text.slice(0, deletePosition) + '\u1160' + text.slice(deletePosition + 1);
+                        newPosition = deletePosition + 1;
+                    }
                 } else {
                     text = text.slice(0, deletePosition) + deleted + text.slice(deletePosition + 1);
                     newPosition = deletePosition + deleted.length;
