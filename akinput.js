@@ -1012,6 +1012,23 @@ license: MIT License
                 }
             } else if (event.type == 'replace') {
                 //console.log('onInput', event, element.value);
+                if (event.value.length == 1 && (event.event.inputType == 'insertText' || event.event.inputType == 'insertCompositionText')) {
+                    const lastValue = event.lastValue.slice(0, event.start) + event.lastValue.slice(event.end);
+                    const ret = akComposite(
+                        lastValue, 
+                        event.start, 
+                        event.value, 
+                        element.akShifted, 
+                        element.akCompBegin);
+                     if (ret) {
+                        setTimeout(function() {
+                            setCaretPos(element, ret.position);
+                            updateSurrogateDiv(element);
+                        }, timeDelay);
+                        element.akCompBegin = ret.compBegin;
+                        return ret.text;
+                    }
+                }
                 element.akCompBegin = null;
                 updateSurrogateDiv(element);
             }
