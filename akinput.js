@@ -193,7 +193,6 @@ license: MIT License
                     }, timeDelay);
                     if (!isFirefox) { 
                         inputElement.composingEvents[event.data] = setTimeout(function(){
-                            console.log('timeout');
                             dispatch(event, inputType, trueValue);
                         }, timeDelay * 2);
                     }
