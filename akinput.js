@@ -1046,7 +1046,9 @@ license: MIT License
                 //console.log(event);
                 const p = getCaretPos(element);
                 if (p <= element.akCompBegin) element.akCompBegin = null;
-            } else if (event.key == 'ArrowLeft' || event.key == 'ArrowRight') {
+            } else if (event.key == 'ArrowLeft' || event.key == 'ArrowRight' || event.key == 'ArrowUp' || event.key == 'ArrowDown'
+                || event.key == 'Home' || event.key == 'End' || event.key == 'PageUp' || event.key == 'PageDown'
+            ) {
                 element.akCompBegin = null;
             }
             updateSurrogateDiv(element);
