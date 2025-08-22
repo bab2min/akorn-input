@@ -191,9 +191,12 @@ license: MIT License
                         inputElement.blur();
                         inputElement.focus();
                     }, timeDelay);
-                    inputElement.composingEvents[event.data] = setTimeout(function(){
-                        dispatch(event, inputType, trueValue);
-                    }, timeDelay * 2);
+                    if (!isFirefox) { 
+                        inputElement.composingEvents[event.data] = setTimeout(function(){
+                            console.log('timeout');
+                            dispatch(event, inputType, trueValue);
+                        }, timeDelay * 2);
+                    }
                     return;
                 }
             } else if (inputType == 'deleteContentBackward') {
@@ -203,9 +206,11 @@ license: MIT License
             } else {
                 return;
             }
-            if (inputElement.composingEvents[event.data]) {
-                clearTimeout(inputElement.composingEvents[event.data]);
-                delete inputElement.composingEvents[event.data];
+            if (!isFirefox) {
+                if (inputElement.composingEvents[event.data]) {
+                    clearTimeout(inputElement.composingEvents[event.data]);
+                    delete inputElement.composingEvents[event.data];
+                }
             }
             dispatch(event, inputType, trueValue);
         });
