@@ -1,5 +1,5 @@
 ﻿/**
-jQuery용 옛한글 입력기 akorn input v0.3.0
+jQuery용 옛한글 입력기 akorn input v0.3.1
 
 email: bab2min@gmail.com
 github: https://github.com/bab2min/akorn-input/
